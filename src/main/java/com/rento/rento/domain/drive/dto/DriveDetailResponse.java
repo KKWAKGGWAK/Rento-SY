@@ -1,0 +1,44 @@
+package com.rento.rento.domain.drive.dto;
+
+import com.rento.rento.domain.drive.entity.Drive;
+import com.rento.rento.domain.drive.entity.DriveType;
+import com.rento.rento.domain.member.entity.Member;
+import com.rento.rento.domain.vehicle.entity.Vehicle;
+import lombok.Builder;
+
+import java.time.LocalDateTime;
+
+@Builder
+public record DriveDetailResponse(
+    Member member,
+
+    Vehicle vehicle,
+
+    DriveType driveType,
+
+    LocalDateTime startDate,
+
+    LocalDateTime endDate,
+
+    String startLocation,
+
+    String endLocation,
+
+    Long distance,
+
+    boolean isStart
+) {
+    public static DriveDetailResponse fromEntity(Drive drive){
+        return DriveDetailResponse.builder()
+                .member(drive.getMember())
+                .vehicle(drive.getVehicle())
+                .driveType(drive.getDriveType())
+                .startDate(drive.getStartDate())
+                .endDate(drive.getEndDate())
+                .startLocation(drive.getStartLocation())
+                .endLocation(drive.getEndLocation())
+                .distance(drive.getDistance())
+                .isStart(drive.isStart())
+                .build();
+    }
+}
