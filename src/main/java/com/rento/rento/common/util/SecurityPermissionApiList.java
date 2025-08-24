@@ -6,7 +6,7 @@ public class SecurityPermissionApiList {
     }
 
     public static final String[] PUBLIC_URLS = {
-
+            "/**",
             "/health",
 
             // Reservation APIs

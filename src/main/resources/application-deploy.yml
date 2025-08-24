@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: Rento
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+  datasource:
+    url: jdbc:mysql://mysql:3306/rento?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: 1234
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect # ? MySQL? ????? ??
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+  # ? Tracing ?? ??
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://tempo:4317
+
+logging:
+  file:
+    name: /logs/app.log
+  level:
+    root: INFO

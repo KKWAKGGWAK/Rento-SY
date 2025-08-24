@@ -1,0 +1,45 @@
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9091 # Prometheus gRPC 포트와 겹치지 않는 다른 포트 사용
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  lifecycler:
+    ring:
+      replication_factor: 1
+      kvstore:
+        store: inmemory
+    final_sleep: 0s
+
+compactor:
+  compaction:
+    compaction_window: 1h
+
+storage:
+  trace:
+    backend: local # 로컬 파일 시스템에 저장
+    local:
+      path: /tmp/tempo/traces
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: docker-compose
+  processor:
+    service_graphs:
+      histogram_buckets: [0.001, 0.01, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10]
+    span_metrics: {}
+  storage:
+    path: /var/tempo   # ← /var/tempo로 통일
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true

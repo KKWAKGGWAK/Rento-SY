@@ -1,0 +1,128 @@
+version: '3.7'
+
+services:
+  # 🆕 Spring Boot 애플리케이션 서비스 추가
+  rento-app:
+    build: .
+    container_name: rento-app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/logs  # 로컬 logs 폴더와 컨테이너 /logs 폴더 연결
+    environment:
+      - SPRING_PROFILES_ACTIVE=deploy
+      # OpenTelemetry 환경변수 (Java Agent가 자동으로 인식)
+      - OTEL_SERVICE_NAME=rento-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none  # 🔥 이게 핵심! Tempo는 metrics를 받지 않음
+      - OTEL_LOGS_EXPORTER=none     # 🔥 이것도 중요! 로그는 Loki로 보내야 함
+      # Spring Boot Actuator tracing 설정
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=1.0
+      - MANAGEMENT_OTLP_TRACING_ENDPOINT=http://tempo:4317
+    networks:
+      - monitor-net
+    depends_on:
+      tempo:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090"
+    networks:
+      - monitor-net
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+
+    ports:
+      - "3000:3000"
+    networks:
+      - monitor-net
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    user: "1000" # Grafana가 파일을 읽을 수 있도록 권한 설정
+
+  loki:
+    image: grafana/loki
+    container_name: loki
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/config.yml
+      - ./loki/data:/tmp/loki
+    ports:
+      - "3100:3100"
+    command: --config.file=/etc/loki/config.yml
+    networks:
+      - monitor-net
+    user: "root"
+
+  promtail:
+    image: grafana/promtail
+    container_name: promtail
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+      # Spring Boot 애플리케이션의 로그가 있는 디렉토리를 마운트
+      - ./logs:/logs
+    command: --config.file=/etc/promtail/config.yml
+    networks:
+      - monitor-net
+    depends_on:
+      - rento-app
+
+  tempo:
+    image: grafana/tempo:2.8.0
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo-config.yml" ]
+    volumes:
+      - ./tempo/tempo-config.yml:/etc/tempo-config.yml
+      - ./tempo/data:/var/tempo
+    ports:
+      - "14268:14268" # Jaeger-Thrift HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "3200:3200"
+      - "9091:9091"
+    networks:
+      - monitor-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=rento
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+    networks:
+      - monitor-net
+    # 🆕 healthcheck 설정 추가
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  monitor-net:
+    driver: bridge
