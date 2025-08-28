@@ -5,6 +5,14 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+### MySQL ###
+mysql/data
+*.ibd
+*.ib_logfile*
+*.pid
+*.sock
+
+
 ### STS ###
 .apt_generated
 .classpath
@@ -35,3 +43,5 @@ out/
 
 ### VS Code ###
 .vscode/
+/tempo/data/
+/logs/
