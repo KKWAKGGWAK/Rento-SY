@@ -12,12 +12,6 @@ mysql/data
 *.pid
 *.sock
 
-### Tempo ###
-tempo/data
-
-
-### Log ###
-logs
 
 ### STS ###
 .apt_generated
@@ -49,3 +43,5 @@ out/
 
 ### VS Code ###
 .vscode/
+/tempo/data/
+/logs/
