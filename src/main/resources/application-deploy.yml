@@ -36,3 +36,6 @@ logging:
     name: /logs/app.log
   level:
     root: INFO
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
